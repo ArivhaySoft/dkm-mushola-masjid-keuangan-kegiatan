@@ -16,7 +16,7 @@ Aplikasi pencatatan keuangan berbasis **Laravel 11 + Livewire Volt** untuk masji
 - ✅ **Cetak PDF** — laporan profesional dengan detail per kategori
 - ✅ **Export Excel** — semua data bisa diunduh
 - ✅ **Kegiatan** — jadwal pengajian, dakwah, dengan foto & artikel
-- ✅ **Hak Akses** — admin, bendahara, viewer
+- ✅ **Hak Akses** — admin, bendahara, editor, viewer
 - ✅ **Mobile Friendly** — sidebar responsive, layout adaptif
 
 ---
@@ -185,6 +185,7 @@ Setelah menjadi admin, Anda bisa mengatur hak akses pengguna lain melalui halama
 |-------|-------|-----------------|-----------|
 | **Admin** | ✅ | ✅ | ✅ |
 | **Bendahara** | ✅ | ✅ | ❌ |
+| **Editor** | ✅ | ✅ (kegiatan, jenis kegiatan) | ❌ |
 | **Viewer** | ✅ | ❌ | ❌ |
 
 ---
