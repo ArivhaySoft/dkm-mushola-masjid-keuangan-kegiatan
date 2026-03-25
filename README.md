@@ -306,4 +306,4 @@ routes/web.php                 ← Semua route
 
 ---
 
-*Dibuat dengan ❤️ untuk kemajuan pengelolaan keuangan mushola Indonesia*
+*Dibuat dengan ❤️ untuk kemajuan pengelolaan keuangan Mesjid / mushola Indonesia*
