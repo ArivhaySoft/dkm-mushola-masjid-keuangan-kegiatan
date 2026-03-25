@@ -19,11 +19,29 @@ Aplikasi pencatatan keuangan berbasis **Laravel 11 + Livewire Volt** untuk masji
 - ✅ **Hak Akses** — admin, bendahara, editor, viewer
 - ✅ **Mobile Friendly** — sidebar responsive, layout adaptif
 
-## 📷 Screenshot (placeholder)
+## 📷 Screenshot
 
-Simpan screenshot ke `public/images/screenshot-keuangan.png` atau `docs/screenshot-keuangan.png`, lalu tambahkan di bawah ini:
+Screenshots telah ditambahkan di folder `docs/`:
 
-![Keuangan Mushola - Dashboard](docs/screenshot-keuangan.png)
+1. `0_halaman_login.png`
+2. `1_halaman_public.png`
+3. `2_halaman_dashboard.png`
+4. `3_halaman_aruskas.png`
+5. `4_halaman_transfer.png`
+6. `5_halaman_lap_periodik.png`
+7. `6_halaman_lap_bulanan.png`
+8. `7_halaman_lap_tahunan.png`
+9. `8_halaman_kegiatan.png`
+10. `9_halaman_master_rekening.png`
+11. `10_halaman_master_kategori_kas.png`
+12. `11_halaman_jenis_kegiatan.png`
+13. `12_halaman_hak_akses.png`
+14. `13_halaman_reset_data.png`
+15. `14_halaman_pengaturan.png`
+
+Preview contoh (dashboard):
+
+![Keuangan Mushola - Dashboard](docs/2_halaman_dashboard.png)
 
 ---
 
