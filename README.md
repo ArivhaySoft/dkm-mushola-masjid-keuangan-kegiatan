@@ -163,17 +163,13 @@ php artisan optimize
 
 ## 👑 Setup Admin Pertama
 
-Setelah login pertama kali via Google, jalankan perintah ini untuk menjadikan diri Anda admin:
+Untuk membuat admin pertama, cukup lakukan ini:
 
-```bash
-php artisan tinker
-```
+1. Atur `ADMIN_SECRET` di file `.env` (misalnya `ADMIN_SECRET=DKM@FajrulIman2026`).
+2. Login pertama kali menggunakan Google.
+3. Setelah login, halaman akan meminta `Password Install` (`admin_secret`). Masukkan yang sama dengan nilai di `.env`.
 
-```php
-$user = App\Models\User::where('email', 'your@email.com')->first();
-$adminRole = App\Models\Role::where('name', 'admin')->first();
-$user->roles()->sync([$adminRole->id]);
-```
+Jika benar, akun Anda otomatis mendapatkan role **admin**.
 
 Setelah menjadi admin, Anda bisa mengatur hak akses pengguna lain melalui halaman **Hak Akses** di aplikasi.
 
