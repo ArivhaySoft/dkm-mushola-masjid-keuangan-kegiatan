@@ -13,6 +13,7 @@ Aplikasi pencatatan keuangan berbasis **Laravel 11 + Livewire Volt** untuk masji
 - ✅ **Laporan Periodik** — filter tanggal bebas, export PDF + Excel
 - ✅ **Laporan Bulanan** — pilih bulan/tahun, ringkasan + detail per kategori
 - ✅ **Laporan Tahunan** — rekap 12 bulan + per kategori
+- ✅ **Laporan Mutasi Rekening** — detail mutasi per rekening, running saldo, filter rekening, export PDF + Excel
 - ✅ **Cetak PDF** — laporan profesional dengan detail per kategori
 - ✅ **Export Excel** — semua data bisa diunduh
 - ✅ **Kegiatan** — jadwal pengajian, dakwah, dengan foto & artikel
@@ -247,6 +248,12 @@ Setelah menjadi admin, Anda bisa mengatur hak akses pengguna lain melalui halama
 - Per kategori
 - Export PDF & Excel
 
+### Laporan Mutasi Rekening
+- Filter periode dan filter rekening (default: semua rekening)
+- Menampilkan detail transaksi gabungan: arus kas + transfer rekening
+- Running saldo per baris transaksi agar audit mutasi lebih mudah
+- Export PDF & Excel sesuai filter rekening yang dipilih
+
 ---
 
 ## 🔧 Konfigurasi config/services.php
@@ -301,10 +308,12 @@ resources/views/
       periodik.blade.php       ← Laporan Periodik (Volt)
       bulanan.blade.php        ← Laporan Bulanan (Volt)
       tahunan.blade.php        ← Laporan Tahunan (Volt)
+      mutasi-rekening.blade.php ← Laporan Mutasi Rekening (Volt)
     kegiatan/index.blade.php   ← Kegiatan (Volt)
     profile.blade.php          ← Profil (Volt)
     hak-akses.blade.php        ← Hak Akses (Volt)
   laporan/pdf.blade.php        ← Template PDF
+  laporan/mutasi-rekening-pdf.blade.php ← Template PDF Mutasi Rekening
 
 routes/web.php                 ← Semua route
 ```
