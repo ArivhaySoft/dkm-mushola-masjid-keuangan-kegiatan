@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Kategori;
+use App\Models\ActivityLog;
 use App\Models\Rekening;
 use App\Models\TransferRekening;
 use Livewire\Volt\Component;
@@ -74,6 +75,15 @@ new class extends Component
         ]);
 
         $tr = TransferRekening::findOrFail($this->editId);
+        $before = [
+            'dari_rekening' => (int) $tr->dari_rekening,
+            'ke_rekening' => (int) $tr->ke_rekening,
+            'id_kategori' => (int) $tr->id_kategori,
+            'jumlah' => (float) $tr->jumlah,
+            'keterangan' => $tr->keterangan,
+            'tanggal' => optional($tr->tanggal)->format('Y-m-d'),
+        ];
+
         $tr->update([
             'dari_rekening' => $this->tr_dari,
             'ke_rekening'   => $this->tr_ke,
@@ -82,6 +92,23 @@ new class extends Component
             'keterangan'    => $this->tr_ket ?: null,
             'tanggal'       => $this->tr_tanggal,
         ]);
+
+        $this->logActivity(
+            module: 'transfer_saldo',
+            action: 'update',
+            entityType: 'transfer_rekening',
+            entityId: (int) $tr->id,
+            description: 'Edit transfer saldo ID ' . $tr->id . ' (Rp ' . number_format($before['jumlah'], 0, ',', '.') . ' → Rp ' . number_format($tr->jumlah, 0, ',', '.') . ')',
+            before: $before,
+            after: [
+                'dari_rekening' => (int) $tr->dari_rekening,
+                'ke_rekening' => (int) $tr->ke_rekening,
+                'id_kategori' => (int) $tr->id_kategori,
+                'jumlah' => (float) $tr->jumlah,
+                'keterangan' => $tr->keterangan,
+                'tanggal' => optional($tr->tanggal)->format('Y-m-d'),
+            ],
+        );
 
         session()->flash('success', 'Transfer rekening berhasil diperbarui.');
         $this->showEdit = false;
@@ -96,7 +123,28 @@ new class extends Component
 
     public function deleteTransfer(): void
     {
-        TransferRekening::findOrFail($this->deleteId)->delete();
+        $tr = TransferRekening::findOrFail($this->deleteId);
+        $before = [
+            'dari_rekening' => (int) $tr->dari_rekening,
+            'ke_rekening' => (int) $tr->ke_rekening,
+            'id_kategori' => (int) $tr->id_kategori,
+            'jumlah' => (float) $tr->jumlah,
+            'keterangan' => $tr->keterangan,
+            'tanggal' => optional($tr->tanggal)->format('Y-m-d'),
+        ];
+
+        $tr->delete();
+
+        $this->logActivity(
+            module: 'transfer_saldo',
+            action: 'delete',
+            entityType: 'transfer_rekening',
+            entityId: (int) $tr->id,
+            description: 'Hapus transfer saldo ID ' . $tr->id . ' (Rp ' . number_format($before['jumlah'], 0, ',', '.') . ')',
+            before: $before,
+            after: null,
+        );
+
         session()->flash('success', 'Transfer rekening berhasil dihapus.');
         $this->showDelete = false;
         $this->deleteId   = null;
@@ -106,6 +154,29 @@ new class extends Component
     {
         $this->editId = null;
         $this->reset(['tr_dari', 'tr_ke', 'tr_kat', 'tr_jumlah', 'tr_ket', 'tr_tanggal']);
+    }
+
+    private function logActivity(
+        string $module,
+        string $action,
+        string $entityType,
+        int $entityId,
+        ?string $description = null,
+        ?array $before = null,
+        ?array $after = null
+    ): void {
+        ActivityLog::create([
+            'module' => $module,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'description' => $description,
+            'before' => $before,
+            'after' => $after,
+            'created_by' => auth()->id(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
     }
 }; ?>
 

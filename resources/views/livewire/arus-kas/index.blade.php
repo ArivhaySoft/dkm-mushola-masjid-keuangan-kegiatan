@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Kategori;
+use App\Models\ActivityLog;
 use App\Models\Keuangan;
 use App\Models\Rekening;
 use App\Models\TransferRekening;
@@ -161,10 +162,55 @@ new class extends Component
         ];
 
         if ($this->editId) {
-            Keuangan::findOrFail($this->editId)->update($data);
+            $trx = Keuangan::findOrFail($this->editId);
+            $beforeNominal = $trx->masuk > 0 ? $trx->masuk : $trx->keluar;
+            $afterNominal = $data['masuk'] > 0 ? $data['masuk'] : $data['keluar'];
+            $before = [
+                'tanggal' => optional($trx->tanggal)->format('Y-m-d'),
+                'masuk' => (float) $trx->masuk,
+                'keluar' => (float) $trx->keluar,
+                'keterangan' => $trx->keterangan,
+                'id_rekening' => (int) $trx->id_rekening,
+                'id_kategori' => (int) $trx->id_kategori,
+            ];
+
+            $trx->update($data);
+            $this->logActivity(
+                module: 'arus_kas',
+                action: 'update',
+                entityType: 'keuangan',
+                entityId: (int) $trx->id,
+                description: 'Edit transaksi kas ID ' . $trx->id . ' (Rp ' . number_format($beforeNominal, 0, ',', '.') . ' → Rp ' . number_format($afterNominal, 0, ',', '.') . ')',
+                before: $before,
+                after: [
+                    'tanggal' => $data['tanggal'],
+                    'masuk' => (float) $data['masuk'],
+                    'keluar' => (float) $data['keluar'],
+                    'keterangan' => $data['keterangan'],
+                    'id_rekening' => (int) $data['id_rekening'],
+                    'id_kategori' => (int) $data['id_kategori'],
+                ],
+            );
             session()->flash('success', 'Transaksi berhasil diperbarui.');
         } else {
-            Keuangan::create($data);
+            $created = Keuangan::create($data);
+            $nominal = $data['masuk'] > 0 ? $data['masuk'] : $data['keluar'];
+            $this->logActivity(
+                module: 'arus_kas',
+                action: 'create',
+                entityType: 'keuangan',
+                entityId: (int) $created->id,
+                description: 'Tambah transaksi kas ID ' . $created->id . ' (Rp ' . number_format($nominal, 0, ',', '.') . ')',
+                before: null,
+                after: [
+                    'tanggal' => $data['tanggal'],
+                    'masuk' => (float) $data['masuk'],
+                    'keluar' => (float) $data['keluar'],
+                    'keterangan' => $data['keterangan'],
+                    'id_rekening' => (int) $data['id_rekening'],
+                    'id_kategori' => (int) $data['id_kategori'],
+                ],
+            );
             session()->flash('success', 'Transaksi berhasil ditambahkan.');
         }
 
@@ -195,7 +241,24 @@ new class extends Component
                 return;
             }
 
+            $nominal = $trx->masuk > 0 ? $trx->masuk : $trx->keluar;
             $trx->delete();
+            $this->logActivity(
+                module: 'arus_kas',
+                action: 'delete',
+                entityType: 'keuangan',
+                entityId: (int) $trx->id,
+                description: 'Hapus transaksi kas ID ' . $trx->id . ' (Rp ' . number_format($nominal, 0, ',', '.') . ')',
+                before: [
+                    'tanggal' => optional($trx->tanggal)->format('Y-m-d'),
+                    'masuk' => (float) $trx->masuk,
+                    'keluar' => (float) $trx->keluar,
+                    'keterangan' => $trx->keterangan,
+                    'id_rekening' => (int) $trx->id_rekening,
+                    'id_kategori' => (int) $trx->id_kategori,
+                ],
+                after: null,
+            );
             session()->flash('success', 'Transaksi berhasil dihapus.');
         }
         $this->confirmDelete = false;
@@ -216,7 +279,7 @@ new class extends Component
             'tr_ke.different' => 'Rekening tujuan harus berbeda dengan rekening asal.',
         ]);
 
-        TransferRekening::create([
+        $created = TransferRekening::create([
             'dari_rekening' => $this->tr_dari,
             'ke_rekening'   => $this->tr_ke,
             'id_kategori'   => $this->tr_kat,
@@ -225,6 +288,23 @@ new class extends Component
             'tanggal'       => $this->tr_tanggal,
             'created_by'    => auth()->id(),
         ]);
+
+        $this->logActivity(
+            module: 'transfer_saldo',
+            action: 'create',
+            entityType: 'transfer_rekening',
+            entityId: (int) $created->id,
+            description: 'Tambah transfer saldo ID ' . $created->id . ' (Rp ' . number_format($created->jumlah, 0, ',', '.') . ')',
+            before: null,
+            after: [
+                'dari_rekening' => (int) $created->dari_rekening,
+                'ke_rekening' => (int) $created->ke_rekening,
+                'id_kategori' => (int) $created->id_kategori,
+                'jumlah' => (float) $created->jumlah,
+                'keterangan' => $created->keterangan,
+                'tanggal' => optional($created->tanggal)->format('Y-m-d'),
+            ],
+        );
 
         session()->flash('success', 'Transfer rekening berhasil dicatat.');
         $this->showTransfer = false;
@@ -264,6 +344,29 @@ new class extends Component
     public function downloadTemplate()
     {
         return redirect()->route('export.template-import');
+    }
+
+    private function logActivity(
+        string $module,
+        string $action,
+        string $entityType,
+        int $entityId,
+        ?string $description = null,
+        ?array $before = null,
+        ?array $after = null
+    ): void {
+        ActivityLog::create([
+            'module' => $module,
+            'action' => $action,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'description' => $description,
+            'before' => $before,
+            'after' => $after,
+            'created_by' => auth()->id(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
     }
 
     protected function validateImportFile(): void
