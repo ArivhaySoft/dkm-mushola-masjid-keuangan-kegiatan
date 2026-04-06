@@ -143,7 +143,10 @@ new class extends Component
         @forelse($transfers as $tr)
         <div class="px-4 py-3 space-y-1.5">
             <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400">{{ $tr->tanggal->isoFormat('D MMM Y') }}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">{{ $tr->tanggal->isoFormat('D MMM Y') }}</span>
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">ID: {{ $tr->id }}</span>
+                </div>
                 <span class="text-sm font-bold text-blue-600">Rp {{ number_format($tr->jumlah, 0, ',', '.') }}</span>
             </div>
             <div class="flex items-center gap-1.5 text-xs">
@@ -197,7 +200,10 @@ new class extends Component
             <tbody class="divide-y divide-gray-100">
                 @forelse($transfers as $tr)
                 <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-gray-600">{{ $tr->tanggal->format('d/m/Y') }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                        <div>{{ $tr->tanggal->format('d/m/Y') }}</div>
+                        <div class="text-[10px] text-gray-500 font-semibold">ID {{ $tr->id }}</div>
+                    </td>
                     <td class="px-4 py-3">
                         <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
                             {{ $tr->dariRekening->nama_rek ?? '-' }}
@@ -216,20 +222,22 @@ new class extends Component
                     <td class="px-4 py-3 text-gray-500 hidden lg:table-cell text-xs">{{ $tr->creator->name ?? '-' }}</td>
                     @if(auth()->user()?->isBendahara())
                     <td class="px-4 py-3 text-center">
-                        <div class="flex items-center justify-center gap-1">
+                        <div class="flex items-center justify-center gap-1.5">
                             <button wire:click="editTransfer({{ $tr->id }})"
-                                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl hover:bg-blue-50 text-blue-600" title="Edit">
-                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 text-blue-600 transition text-xs font-medium" title="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
+                                <span>Edit</span>
                             </button>
                             <button wire:click="confirmDelete({{ $tr->id }})"
-                                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl hover:bg-red-50 text-red-500" title="Hapus">
-                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-red-100 text-red-500 transition text-xs font-medium" title="Hapus">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
+                                <span>Hapus</span>
                             </button>
                         </div>
                     </td>

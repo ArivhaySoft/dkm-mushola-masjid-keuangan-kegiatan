@@ -462,7 +462,10 @@ new class extends Component
         @forelse($transaksi as $trx)
         <div class="px-4 py-3 space-y-1">
             <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400">{{ $trx->tanggal->isoFormat('D MMM Y') }}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">{{ $trx->tanggal->isoFormat('D MMM Y') }}</span>
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">ID: {{ $trx->id }}</span>
+                </div>
                 @if($trx->masuk > 0)
                 <span class="text-sm font-bold text-emerald-600">+Rp {{ number_format($trx->masuk, 0, ',', '.') }}</span>
                 @else
@@ -529,7 +532,10 @@ new class extends Component
             <tbody class="divide-y divide-gray-100">
                 @forelse($transaksi as $trx)
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 text-center text-gray-400 text-xs">{{ $transaksi->firstItem() + $loop->index }}</td>
+                    <td class="px-4 py-3 text-center text-gray-400 text-xs">
+                        <div>{{ $transaksi->firstItem() + $loop->index }}</div>
+                        <div class="text-[10px] text-gray-500 font-semibold">ID {{ $trx->id }}</div>
+                    </td>
                     <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $trx->tanggal->format('d/m/Y') }}</td>
                     <td class="px-4 py-3 text-gray-800 font-medium max-w-xs">
                         @if($this->isSaldoAwalTx($trx->keterangan))
@@ -561,20 +567,22 @@ new class extends Component
                             Terkunci
                         </span>
                         @else
-                        <div class="flex items-center justify-center gap-1">
+                        <div class="flex items-center justify-center gap-1.5">
                             <button wire:click="openEdit({{ $trx->id }})"
-                                    class="inline-flex items-center justify-center w-10 h-10 hover:bg-blue-100 text-blue-600 rounded-xl transition" title="Edit">
-                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 text-blue-600 transition text-xs font-medium" title="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
+                                <span>Edit</span>
                             </button>
                             <button wire:click="confirmDeleteItem({{ $trx->id }})"
-                                    class="inline-flex items-center justify-center w-10 h-10 hover:bg-red-100 text-red-500 rounded-xl transition" title="Hapus">
-                                <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-red-100 text-red-500 transition text-xs font-medium" title="Hapus">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
+                                <span>Hapus</span>
                             </button>
                         </div>
                         @endif
