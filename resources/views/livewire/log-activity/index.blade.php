@@ -141,33 +141,81 @@ new class extends Component
     }
 }; ?>
 
-<div>
+<div
+    x-data="{
+        showAlert(type, message) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: message,
+                showConfirmButton: false,
+                timer: 3200,
+                timerProgressBar: true,
+            })
+        },
+        confirmDeleteDateRange() {
+            Swal.fire({
+                title: 'Hapus log pada rentang ini?',
+                text: 'Data log pada periode yang dipilih akan dihapus permanen.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, hapus',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#f59e0b',
+                cancelButtonColor: '#6b7280',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $wire.deleteLogsByDateRange()
+                }
+            })
+        },
+        confirmDeleteAllLogs() {
+            Swal.fire({
+                title: 'Hapus semua log activity?',
+                text: 'Semua log arus kas dan transfer saldo akan dihapus permanen.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, hapus semua',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $wire.deleteAllLogs()
+                }
+            })
+        }
+    }"
+>
+    @once
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @endonce
+
     @if(session('success'))
-    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3"
-         x-data x-init="setTimeout(() => $el.remove(), 4000)">
-        {{ session('success') }}
-    </div>
+    <div x-init="showAlert('success', @js(session('success')))" class="hidden"></div>
     @endif
 
     @if(session('error'))
-    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"
-         x-data x-init="setTimeout(() => $el.remove(), 5000)">
-        {{ session('error') }}
-    </div>
+    <div x-init="showAlert('error', @js(session('error')))" class="hidden"></div>
     @endif
 
     <div class="card mb-5">
-        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
+        <div class="mb-4 flex items-center justify-between gap-3">
             <h2 class="text-sm font-bold text-gray-700">Filter Log Activity</h2>
-            <button type="button" wire:click="openDeleteModal" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors">
+            <button
+                type="button"
+                wire:click="openDeleteModal"
+                class="btn-danger whitespace-nowrap"
+            >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-7 0h8"/>
                 </svg>
                 Hapus Log
             </button>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            <div class="col-span-2 md:col-span-2 lg:col-span-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div>
                 <label class="label">Cari</label>
                 <input type="text" wire:model.live.debounce.300ms="search" class="input" placeholder="Cari deskripsi / ID..." />
             </div>
@@ -275,11 +323,11 @@ new class extends Component
     @if($showDeleteModal)
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" wire:click="closeDeleteModal"></div>
-        <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl border border-gray-200 p-5">
-            <div class="flex items-start justify-between gap-4 mb-4">
+        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-xl border border-gray-200 p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3 mb-3">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900">Hapus Log Activity</h3>
-                    <p class="text-sm text-gray-500 mt-1">Pilih hapus berdasarkan rentang tanggal atau hapus semua log arus kas dan transfer saldo.</p>
+                    <h3 class="text-base font-bold text-gray-900">Hapus Log Activity</h3>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1">Pilih hapus berdasarkan rentang tanggal atau hapus semua log arus kas dan transfer saldo.</p>
                 </div>
                 <button type="button" wire:click="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -288,8 +336,8 @@ new class extends Component
                 </button>
             </div>
 
-            <div class="space-y-4">
-                <div class="rounded-xl border border-gray-200 p-4">
+            <div class="space-y-3">
+                <div class="rounded-xl border border-gray-200 p-3.5 sm:p-4">
                     <p class="text-sm font-semibold text-gray-800 mb-3">Hapus Rentang Tanggal</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
@@ -303,17 +351,21 @@ new class extends Component
                             @error('deleteTo') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                         </div>
                     </div>
-                    <button type="button" wire:click="deleteLogsByDateRange" wire:confirm="Yakin hapus log pada rentang tanggal ini?" class="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors">
-                        Hapus Rentang Tanggal
-                    </button>
+                    <div class="mt-3 flex justify-end">
+                        <button type="button" x-on:click="confirmDeleteDateRange()" class="btn-secondary border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100">
+                            Hapus Rentang Tanggal
+                        </button>
+                    </div>
                 </div>
 
-                <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+                <div class="rounded-xl border border-red-200 bg-red-50 p-3.5 sm:p-4">
                     <p class="text-sm font-semibold text-red-700 mb-1">Hapus Semua Log</p>
-                    <p class="text-sm text-red-600">Aksi ini akan menghapus seluruh log activity untuk arus kas dan transfer saldo.</p>
-                    <button type="button" wire:click="deleteAllLogs" wire:confirm="Yakin hapus semua log activity?" class="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors">
-                        Hapus Semua Log
-                    </button>
+                    <p class="text-xs sm:text-sm text-red-600">Aksi ini akan menghapus seluruh log activity untuk arus kas dan transfer saldo.</p>
+                    <div class="mt-3 flex justify-end">
+                        <button type="button" x-on:click="confirmDeleteAllLogs()" class="btn-danger">
+                            Hapus Semua Log
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
