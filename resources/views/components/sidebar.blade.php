@@ -70,6 +70,12 @@
             <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
             Kegiatan
         </a>
+        @if(auth()->user()?->isBendahara())
+        <a href="{{ route('log-activity.index') }}" class="sidebar-link {{ request()->routeIs('log-activity.*') ? 'active' : 'text-primary-200' }}">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            Log Activity
+        </a>
+        @endif
 
         @if(auth()->user()?->isAdmin())
         <div class="pt-3 pb-1"><p class="px-3 text-xs font-bold text-primary-400 uppercase tracking-widest">Admin</p></div>

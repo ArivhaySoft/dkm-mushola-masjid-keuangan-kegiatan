@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Volt::route('/laporan/bulanan',  'laporan.bulanan')->name('laporan.bulanan');
     Volt::route('/laporan/tahunan',  'laporan.tahunan')->name('laporan.tahunan');
     Volt::route('/laporan/mutasi-rekening', 'laporan.mutasi-rekening')->name('laporan.mutasi-rekening');
+    Volt::route('/log-activity', 'log-activity.index')->name('log-activity.index');
     Volt::route('/kegiatan',         'kegiatan.index')->name('kegiatan');
     Volt::route('/master/jenis-kegiatan', 'master.jenis-kegiatan')->name('master.jenis-kegiatan');
     Volt::route('/profile',          'profile')->name('profile');

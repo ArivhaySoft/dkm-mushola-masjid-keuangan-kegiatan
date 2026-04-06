@@ -165,6 +165,8 @@ new class extends Component
             $trx = Keuangan::findOrFail($this->editId);
             $beforeNominal = $trx->masuk > 0 ? $trx->masuk : $trx->keluar;
             $afterNominal = $data['masuk'] > 0 ? $data['masuk'] : $data['keluar'];
+            $beforeJenis = $trx->masuk > 0 ? 'Masuk' : 'Keluar';
+            $afterJenis = $data['masuk'] > 0 ? 'Masuk' : 'Keluar';
             $before = [
                 'tanggal' => optional($trx->tanggal)->format('Y-m-d'),
                 'masuk' => (float) $trx->masuk,
@@ -180,7 +182,7 @@ new class extends Component
                 action: 'update',
                 entityType: 'keuangan',
                 entityId: (int) $trx->id,
-                description: 'Edit transaksi kas ID ' . $trx->id . ' (Rp ' . number_format($beforeNominal, 0, ',', '.') . ' → Rp ' . number_format($afterNominal, 0, ',', '.') . ')',
+                description: 'Edit transaksi kas ID ' . $trx->id . ' (' . $beforeJenis . ' Rp ' . number_format($beforeNominal, 0, ',', '.') . ' → ' . $afterJenis . ' Rp ' . number_format($afterNominal, 0, ',', '.') . ')',
                 before: $before,
                 after: [
                     'tanggal' => $data['tanggal'],
@@ -195,12 +197,14 @@ new class extends Component
         } else {
             $created = Keuangan::create($data);
             $nominal = $data['masuk'] > 0 ? $data['masuk'] : $data['keluar'];
+            $jenisText = $data['masuk'] > 0 ? 'Masuk' : 'Keluar';
+                $keteranganText = trim((string) ($data['keterangan'] ?? ''));
             $this->logActivity(
                 module: 'arus_kas',
                 action: 'create',
                 entityType: 'keuangan',
                 entityId: (int) $created->id,
-                description: 'Tambah transaksi kas ID ' . $created->id . ' (Rp ' . number_format($nominal, 0, ',', '.') . ')',
+                description: 'Tambah transaksi kas ID ' . $created->id . ' (' . $jenisText . ' Rp ' . number_format($nominal, 0, ',', '.') . ')' . ($keteranganText !== '' ? ' - Ket: ' . $keteranganText : ''),
                 before: null,
                 after: [
                     'tanggal' => $data['tanggal'],
@@ -242,13 +246,14 @@ new class extends Component
             }
 
             $nominal = $trx->masuk > 0 ? $trx->masuk : $trx->keluar;
+            $jenisText = $trx->masuk > 0 ? 'Masuk' : 'Keluar';
             $trx->delete();
             $this->logActivity(
                 module: 'arus_kas',
                 action: 'delete',
                 entityType: 'keuangan',
                 entityId: (int) $trx->id,
-                description: 'Hapus transaksi kas ID ' . $trx->id . ' (Rp ' . number_format($nominal, 0, ',', '.') . ')',
+                description: 'Hapus transaksi kas ID ' . $trx->id . ' (' . $jenisText . ' Rp ' . number_format($nominal, 0, ',', '.') . ')',
                 before: [
                     'tanggal' => optional($trx->tanggal)->format('Y-m-d'),
                     'masuk' => (float) $trx->masuk,
@@ -289,12 +294,13 @@ new class extends Component
             'created_by'    => auth()->id(),
         ]);
 
+            $keteranganText = trim((string) ($created->keterangan ?? ''));
         $this->logActivity(
             module: 'transfer_saldo',
             action: 'create',
             entityType: 'transfer_rekening',
             entityId: (int) $created->id,
-            description: 'Tambah transfer saldo ID ' . $created->id . ' (Rp ' . number_format($created->jumlah, 0, ',', '.') . ')',
+                description: 'Tambah transfer saldo ID ' . $created->id . ' (Rp ' . number_format($created->jumlah, 0, ',', '.') . ')' . ($keteranganText !== '' ? ' - Ket: ' . $keteranganText : ''),
             before: null,
             after: [
                 'dari_rekening' => (int) $created->dari_rekening,
