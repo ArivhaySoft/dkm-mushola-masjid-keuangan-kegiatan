@@ -92,11 +92,26 @@ new class extends Component
 
         $saldoAwal = 0;
         if ($from) {
-            $saldoAwal = Keuangan::where('tanggal', '<', $from)
+            $saldoKeuangan = Keuangan::where('tanggal', '<', $from)
                 ->when($this->filterKat, fn($q) => $q->where('id_kategori', $this->filterKat))
                 ->when($this->filterRek, fn($q) => $q->where('id_rekening', $this->filterRek))
                 ->selectRaw('COALESCE(SUM(masuk),0) - COALESCE(SUM(keluar),0) as saldo')
                 ->value('saldo') ?? 0;
+
+            $saldoTransfer = 0;
+            if ($this->filterRek) {
+                $transferMasuk = TransferRekening::where('ke_rekening', $this->filterRek)
+                    ->whereDate('tanggal', '<', $from)
+                    ->when($this->filterKat, fn($q) => $q->where('id_kategori', $this->filterKat))
+                    ->sum('jumlah');
+                $transferKeluar = TransferRekening::where('dari_rekening', $this->filterRek)
+                    ->whereDate('tanggal', '<', $from)
+                    ->when($this->filterKat, fn($q) => $q->where('id_kategori', $this->filterKat))
+                    ->sum('jumlah');
+                $saldoTransfer = (float) $transferMasuk - (float) $transferKeluar;
+            }
+
+            $saldoAwal = (float) $saldoKeuangan + $saldoTransfer;
         }
 
         $totalMasuk  = (clone $query)->getQuery()->sum('masuk');
