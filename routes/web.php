@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     Volt::route('/laporan/periodik', 'laporan.periodik')->name('laporan.periodik');
     Volt::route('/laporan/bulanan',  'laporan.bulanan')->name('laporan.bulanan');
     Volt::route('/laporan/tahunan',  'laporan.tahunan')->name('laporan.tahunan');
+    Volt::route('/laporan/mutasi-rekening', 'laporan.mutasi-rekening')->name('laporan.mutasi-rekening');
     Volt::route('/kegiatan',         'kegiatan.index')->name('kegiatan');
     Volt::route('/master/jenis-kegiatan', 'master.jenis-kegiatan')->name('master.jenis-kegiatan');
     Volt::route('/profile',          'profile')->name('profile');
@@ -66,10 +67,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/export/laporan-bulanan',     [ExportController::class, 'laporanBulanan'])->name('export.laporan-bulanan');
     Route::get('/export/laporan-tahunan',     [ExportController::class, 'laporanTahunan'])->name('export.laporan-tahunan');
     Route::get('/export/transfer-rekening',   [ExportController::class, 'transferRekening'])->name('export.transfer-rekening');
+    Route::get('/export/laporan-mutasi-rekening', [ExportController::class, 'laporanMutasiRekening'])->name('export.laporan-mutasi-rekening');
     Route::get('/export/kegiatan',            [ExportController::class, 'kegiatan'])->name('export.kegiatan');
     Route::get('/export/template-import',       [ExportController::class, 'templateImport'])->name('export.template-import');
 
     // PDF
     Route::get('/export/laporan-pdf',         [ExportController::class, 'laporanPdf'])->name('export.laporan-pdf');
     Route::get('/export/laporan-pdf-tahunan', [ExportController::class, 'laporanPdfTahunan'])->name('export.laporan-pdf-tahunan');
+    Route::get('/export/laporan-mutasi-rekening-pdf', [ExportController::class, 'laporanMutasiRekeningPdf'])->name('export.laporan-mutasi-rekening-pdf');
 });

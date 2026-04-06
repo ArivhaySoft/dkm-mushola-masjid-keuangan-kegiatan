@@ -1,0 +1,13 @@
+# Backup Struktur Database (Migrations Snapshot)
+- 2024_01_01_000001_create_users_table.php
+- 2024_01_01_000002_create_rekening_table.php
+- 2024_01_01_000003_create_kategori_table.php
+- 2024_01_01_000004_create_keuangan_table.php
+- 2024_01_01_000005_create_kegiatan_table.php
+- 2024_01_01_000006_create_roles_table.php
+- 2024_01_01_000007_create_settings_table.php
+- 2024_01_01_000008_create_kegiatan_fotos_table.php
+- 2026_03_22_000001_add_media_type_to_kegiatan_fotos_table.php
+- 2026_03_23_000001_create_jadwal_pengajian_table.php
+- 2026_03_23_000002_create_visitors_table.php
+- 2026_03_24_000001_create_jenis_kegiatan_table.php

@@ -9,6 +9,7 @@ use App\Models\Kategori;
 use App\Models\Keuangan;
 use App\Models\Rekening;
 use App\Models\Setting;
+use App\Models\TransferRekening;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -78,6 +79,166 @@ class ExportController extends Controller
             new \App\Exports\TransferRekeningExport($request->from, $request->to),
             $filename
         );
+    }
+
+    // ── Excel: Laporan Mutasi Rekening (detail per rekening) ──────────────
+    public function laporanMutasiRekening(Request $request)
+    {
+        $from = $request->from ? Carbon::parse($request->from)->startOfDay()->format('Y-m-d') : null;
+        $to = $request->to ? Carbon::parse($request->to)->endOfDay()->format('Y-m-d') : null;
+        $rekeningId = $request->rekening_id ? (int) $request->rekening_id : null;
+        
+        $filename = 'laporan-mutasi-rekening-' . now()->format('Ymd-His') . '.xlsx';
+        return Excel::download(
+            new \App\Exports\LaporanMutasiRekeningExport($from, $to, $rekeningId),
+            $filename
+        );
+    }
+
+    // ── PDF: Laporan Mutasi Rekening ──────────────────────────────────────
+    public function laporanMutasiRekeningPdf(Request $request)
+    {
+        $from = $request->from;
+        $to   = $request->to;
+        $rekeningId = $request->rekening_id ? (int) $request->rekening_id : null;
+        [$appName, $namaMushola, $logoDataUri] = $this->pdfIdentity();
+
+        $rekeningList = $rekeningId ? Rekening::where('id', $rekeningId)->get() : Rekening::all();
+        $dataMutasi = [];
+
+        foreach ($rekeningList as $rekening) {
+            $mutatsiData = $this->getTransaksiRekeningForPdf($rekening, $from, $to);
+            if (count($mutatsiData['transaksi']) > 0) {
+                $dataMutasi[] = [
+                    'rekening' => $rekening,
+                    'nama_rek' => $rekening->nama_rek,
+                    'atas_nama' => $rekening->atas_nama,
+                    'no_rek' => $rekening->no_rek,
+                    'saldo_awal' => $mutatsiData['saldo_awal'],
+                    'masuk' => $mutatsiData['masuk'],
+                    'keluar' => $mutatsiData['keluar'],
+                    'saldo_akhir' => $mutatsiData['saldo_akhir'],
+                    'transaksi' => $mutatsiData['transaksi'],
+                ];
+            }
+        }
+
+        $pdf = Pdf::loadView('laporan.mutasi-rekening-pdf', compact(
+            'from', 'to', 'dataMutasi', 'appName', 'namaMushola', 'logoDataUri'
+        ))->setPaper('a4', 'landscape');
+
+        return $pdf->download('laporan-mutasi-rekening-' . now()->format('Ymd') . '.pdf');
+    }
+
+    private function getTransaksiRekeningForPdf(Rekening $rekening, ?string $from, ?string $to): array
+    {
+        $transaksi = [];
+        $saldoAwal = $rekening->calculateSaldoSebelum($from);
+        $saldoRunning = $saldoAwal;
+
+        // Get Keuangan entries
+        $keuanganData = Keuangan::where('id_rekening', $rekening->id)
+            ->with(['kategori'])
+            ->when($from, fn($q) => $q->whereDate('tanggal', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('tanggal', '<=', $to))
+            ->orderBy('tanggal')
+            ->orderBy('id')
+            ->get();
+
+        $totalMasuk = 0;
+        $totalKeluar = 0;
+
+        foreach ($keuanganData as $k) {
+            $tipe = (float) $k->masuk > 0 ? 'Pemasukan' : 'Pengeluaran';
+            $masuk = (float) $k->masuk;
+            $keluar = (float) $k->keluar;
+            $totalMasuk += $masuk;
+            $totalKeluar += $keluar;
+
+            $transaksi[] = [
+                'tanggal' => $k->tanggal->format('d/m/Y'),
+                'keterangan' => $k->keterangan ?? '-',
+                'tipe' => $tipe,
+                'masuk' => $masuk,
+                'keluar' => $keluar,
+                'kategori_ref' => $k->kategori->nama ?? '-',
+                'sort_date' => $k->tanggal,
+                'sort_id' => $k->id,
+            ];
+        }
+
+        // Get Transfer Masuk
+        $transferMasuk = TransferRekening::where('ke_rekening', $rekening->id)
+            ->with(['dariRekening', 'kategori'])
+            ->when($from, fn($q) => $q->whereDate('tanggal', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('tanggal', '<=', $to))
+            ->orderBy('tanggal')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($transferMasuk as $t) {
+            $masuk = (float) $t->jumlah;
+            $totalMasuk += $masuk;
+
+            $transaksi[] = [
+                'tanggal' => $t->tanggal->format('d/m/Y'),
+                'keterangan' => 'Transfer dari ' . ($t->dariRekening->nama_rek ?? '-'),
+                'tipe' => 'Transfer Masuk',
+                'masuk' => $masuk,
+                'keluar' => 0,
+                'kategori_ref' => $t->kategori->nama ?? '-',
+                'sort_date' => $t->tanggal,
+                'sort_id' => 'tr-' . $t->id,
+            ];
+        }
+
+        // Get Transfer Keluar
+        $transferKeluar = TransferRekening::where('dari_rekening', $rekening->id)
+            ->with(['keRekening', 'kategori'])
+            ->when($from, fn($q) => $q->whereDate('tanggal', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('tanggal', '<=', $to))
+            ->orderBy('tanggal')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($transferKeluar as $t) {
+            $keluar = (float) $t->jumlah;
+            $totalKeluar += $keluar;
+
+            $transaksi[] = [
+                'tanggal' => $t->tanggal->format('d/m/Y'),
+                'keterangan' => 'Transfer ke ' . ($t->keRekening->nama_rek ?? '-'),
+                'tipe' => 'Transfer Keluar',
+                'masuk' => 0,
+                'keluar' => $keluar,
+                'kategori_ref' => $t->kategori->nama ?? '-',
+                'sort_date' => $t->tanggal,
+                'sort_id' => 'tr-' . $t->id,
+            ];
+        }
+
+        // Sort by date and ID
+        usort($transaksi, function ($a, $b) {
+            if ($a['sort_date'] != $b['sort_date']) {
+                return $a['sort_date'] <=> $b['sort_date'];
+            }
+            return strcmp((string)$a['sort_id'], (string)$b['sort_id']);
+        });
+
+        foreach ($transaksi as &$t) {
+            $saldoRunning += ((float) ($t['masuk'] ?? 0)) - ((float) ($t['keluar'] ?? 0));
+            $t['saldo'] = $saldoRunning;
+            unset($t['sort_date'], $t['sort_id']);
+        }
+        unset($t);
+
+        return [
+            'saldo_awal' => $saldoAwal,
+            'masuk' => $totalMasuk,
+            'keluar' => $totalKeluar,
+            'saldo_akhir' => $saldoRunning,
+            'transaksi' => $transaksi,
+        ];
     }
 
     // ── Excel: Kegiatan ───────────────────────────────────────────────────

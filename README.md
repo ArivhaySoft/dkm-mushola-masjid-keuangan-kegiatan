@@ -169,6 +169,25 @@ mysql -u root -p -e "CREATE DATABASE mushola_keuangan CHARACTER SET utf8mb4 COLL
 php artisan migrate --seed
 ```
 
+### 4a. Backup Struktur Database (Current)
+
+Karena environment server bisa saja tidak punya utilitas dump SQL (`sqlite3`/`mysqldump`), backup struktur database disimpan dalam bentuk snapshot migrasi:
+
+- File backup: `database/schema-backup-migrations.txt`
+- Sumber struktur utama: folder `database/migrations/`
+
+Untuk rebuild struktur database sesuai backup:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+Untuk verifikasi daftar migrasi yang jadi sumber struktur:
+
+```bash
+cat database/schema-backup-migrations.txt
+```
+
 ### 5. Storage Link
 
 ```bash
