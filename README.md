@@ -17,6 +17,7 @@ Aplikasi pencatatan keuangan berbasis **Laravel 11 + Livewire Volt** untuk masji
 - ✅ **Cetak PDF** — laporan profesional dengan detail per kategori
 - ✅ **Export Excel** — semua data bisa diunduh
 - ✅ **Kegiatan** — jadwal pengajian, dakwah, dengan foto & artikel
+- ✅ **Log Activity** — riwayat aktivitas setiap transaksi arus kas & transfer saldo (create, update, delete) beserta detail deskripsi, modul, user, dan IP; dilengkapi fitur hapus log per rentang tanggal atau hapus semua
 - ✅ **Hak Akses** — admin, bendahara, editor, viewer
 - ✅ **Mobile Friendly** — sidebar responsive, layout adaptif
 
