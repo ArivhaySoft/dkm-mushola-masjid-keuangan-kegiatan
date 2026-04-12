@@ -22,6 +22,11 @@ class Keuangan extends Model
         'tanggal' => 'date',
     ];
 
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
     public function rekening(): BelongsTo
     {
         return $this->belongsTo(Rekening::class, 'id_rekening');

@@ -35,26 +35,34 @@
 </div>
 
 @livewireScripts
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('livewire:init', () => {
+    Livewire.on('swal', (params) => {
+        const p = Array.isArray(params) ? params[0] : params;
+        Swal.fire({
+            icon: p.type || 'success',
+            title: p.type === 'error' ? 'Gagal!' : (p.type === 'warning' ? 'Perhatian!' : 'Berhasil!'),
+            text: p.message || '',
+            timer: p.timer ?? 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end',
+        });
+    });
+});
+</script>
 @if(session('success') || session('error'))
-<div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
-     class="fixed bottom-4 right-4 z-50 max-w-sm">
+<script>
+document.addEventListener('DOMContentLoaded', () => {
     @if(session('success'))
-    <div class="flex items-center gap-3 bg-white border border-emerald-200 rounded-2xl shadow-lg p-4">
-        <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-        </div>
-        <p class="text-sm text-gray-700 font-medium">{{ session('success') }}</p>
-    </div>
+    Swal.fire({ icon: 'success', title: 'Berhasil!', text: @js(session('success')), timer: 2500, showConfirmButton: false, toast: true, position: 'top-end' });
     @endif
     @if(session('error'))
-    <div class="flex items-center gap-3 bg-white border border-red-200 rounded-2xl shadow-lg p-4">
-        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-        </div>
-        <p class="text-sm text-gray-700 font-medium">{{ session('error') }}</p>
-    </div>
+    Swal.fire({ icon: 'error', title: 'Gagal!', text: @js(session('error')), timer: 3000, showConfirmButton: false, toast: true, position: 'top-end' });
     @endif
-</div>
+});
+</script>
 @endif
 </body>
 </html>

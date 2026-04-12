@@ -16,6 +16,11 @@ class Kegiatan extends Model
         'tanggal_kegiatan' => 'datetime',
     ];
 
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

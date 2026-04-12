@@ -21,6 +21,11 @@ class JadwalPengajian extends Model
         'aktif'         => 'boolean',
     ];
 
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
     /**
      * Hitung tanggal pengajian terakhir (sudah lewat / hari ini).
      */

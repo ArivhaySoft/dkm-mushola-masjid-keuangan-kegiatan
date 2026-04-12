@@ -182,12 +182,6 @@ new class extends Component
 
 <div>
 
-@if(session('success'))
-<div class="mb-4 p-3 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium">
-    {{ session('success') }}
-</div>
-@endif
-
 <div class="grid grid-cols-2 sm:flex sm:flex-row gap-3 items-end mb-5">
     <div class="col-span-1">
         <label class="label">Dari Tanggal</label>

@@ -69,13 +69,6 @@ new class extends Component
 }; ?>
 <div>
 <div class="max-w-xl mx-auto">
-    @if(session('success'))
-    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3"
-         x-data x-init="setTimeout(() => $el.remove(), 4000)">
-        ✓ {{ session('success') }}
-    </div>
-    @endif
-
     <div class="card text-center mb-4">
         @if($editing)
         {{-- Edit Mode --}}

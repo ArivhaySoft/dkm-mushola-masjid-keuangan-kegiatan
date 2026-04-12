@@ -111,15 +111,6 @@ new class extends Component
 }; ?>
 
 <div>
-@if(session('success'))
-<div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3"
-     x-data x-init="setTimeout(() => $el.remove(), 4000)">✓ {{ session('success') }}</div>
-@endif
-@if(session('error'))
-<div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"
-     x-data x-init="setTimeout(() => $el.remove(), 5000)">⚠ {{ session('error') }}</div>
-@endif
-
 <div class="flex justify-between items-center mb-4">
     <h2 class="text-base font-bold text-gray-700">Daftar Jenis Kegiatan</h2>
     @if(auth()->user()?->isAdmin() || auth()->user()?->isEditor())

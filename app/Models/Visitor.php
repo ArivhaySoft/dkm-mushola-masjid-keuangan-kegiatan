@@ -13,4 +13,9 @@ class Visitor extends Model
         'latitude'  => 'decimal:7',
         'longitude' => 'decimal:7',
     ];
+
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
 }

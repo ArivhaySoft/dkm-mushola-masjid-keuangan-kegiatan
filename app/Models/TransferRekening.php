@@ -17,6 +17,11 @@ class TransferRekening extends Model
         'tanggal' => 'date',
     ];
 
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
     public function dariRekening()
     {
         return $this->belongsTo(Rekening::class, 'dari_rekening');

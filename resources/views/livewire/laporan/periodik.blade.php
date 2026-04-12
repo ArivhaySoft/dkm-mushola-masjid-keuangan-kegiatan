@@ -1,8 +1,12 @@
 <?php
 
+use App\Models\HistoryLaporan;
+use App\Models\HistoryLaporanKategori;
+use App\Models\HistoryLaporanRekening;
 use App\Models\Kategori;
 use App\Models\Keuangan;
 use App\Models\Rekening;
+use Carbon\Carbon;
 use Livewire\Volt\Component;
 
 new class extends Component
@@ -16,7 +20,12 @@ new class extends Component
     public string $to   = '';
 
     public bool $hasData = false;
+    public bool $showHistory = false;
 
+    public array $historyList   = [];
+    public int $historyPage     = 1;
+    public int $historyLimit    = 3;
+    public int $historyTotal    = 0;
     public array $dataKategori  = [];
     public array $dataRekening  = [];
     public array $detailMasuk   = [];
@@ -24,11 +33,129 @@ new class extends Component
     public float $totalMasuk    = 0;
     public float $totalKeluar   = 0;
     public float $totalSaldo    = 0;
+    public float $globalSaldoAwal = 0;
 
     public function mount(): void
     {
         $this->from = now()->startOfMonth()->format('Y-m-d');
         $this->to   = now()->format('Y-m-d');
+        $this->loadHistory();
+    }
+
+    public function historyPages(): int
+    {
+        return (int) max(1, ceil($this->historyTotal / $this->historyLimit));
+    }
+
+    public function loadHistory(): void
+    {
+        $this->historyTotal = HistoryLaporan::count();
+        if ($this->historyPage > $this->historyPages()) {
+            $this->historyPage = $this->historyPages();
+        }
+
+        $this->historyList = HistoryLaporan::with('creator')
+            ->orderByDesc('created_at')
+            ->offset(($this->historyPage - 1) * $this->historyLimit)
+            ->limit($this->historyLimit)
+            ->get()
+            ->map(fn ($h) => [
+                'id'              => $h->id,
+                'tanggal_dari'    => $h->tanggal_dari->format('Y-m-d'),
+                'tanggal_sampai'  => $h->tanggal_sampai->format('Y-m-d'),
+                'saldo_awal'      => (float) $h->saldo_awal,
+                'masuk'           => (float) $h->masuk,
+                'keluar'          => (float) $h->keluar,
+                'saldo_akhir'     => (float) $h->saldo_akhir,
+                'created_by_name' => $h->creator->name ?? '-',
+                'created_at'      => $h->created_at->format('d/m/Y H:i'),
+            ])
+            ->toArray();
+    }
+
+    public function toggleHistory(): void
+    {
+        $this->showHistory = !$this->showHistory;
+    }
+
+    public function applyHistory(int $id): void
+    {
+        $h = HistoryLaporan::find($id);
+        if ($h) {
+            $this->from = $h->tanggal_sampai->addDay()->format('Y-m-d');
+            $this->to   = now()->format('Y-m-d');
+        }
+    }
+
+    public function previousHistoryPage(): void
+    {
+        if ($this->historyPage > 1) {
+            $this->historyPage--;
+            $this->loadHistory();
+        }
+    }
+
+    public function nextHistoryPage(): void
+    {
+        if ($this->historyPage < $this->historyPages()) {
+            $this->historyPage++;
+            $this->loadHistory();
+        }
+    }
+
+    public function goToHistoryPage(int $page): void
+    {
+        if ($page >= 1 && $page <= $this->historyPages()) {
+            $this->historyPage = $page;
+            $this->loadHistory();
+        }
+    }
+
+    public function simpanHistory(): void
+    {
+        if (!$this->hasData) return;
+
+        $history = HistoryLaporan::create([
+            'tanggal_dari'    => $this->from,
+            'tanggal_sampai'  => $this->to,
+            'saldo_awal'      => $this->globalSaldoAwal,
+            'masuk'           => $this->totalMasuk,
+            'keluar'          => $this->totalKeluar,
+            'saldo_akhir'     => $this->globalSaldoAwal + $this->totalMasuk - $this->totalKeluar,
+            'created_by'      => auth()->id(),
+        ]);
+
+        foreach ($this->dataKategori as $kategori) {
+            HistoryLaporanKategori::create([
+                'history_laporan_id' => $history->id,
+                'kategori_id'        => $kategori['id'],
+                'saldo_awal'         => $kategori['saldo_awal'],
+                'masuk'              => $kategori['masuk'],
+                'keluar'             => $kategori['keluar'],
+                'saldo_akhir'        => $kategori['saldo_akhir'],
+            ]);
+        }
+
+        foreach ($this->dataRekening as $rekening) {
+            HistoryLaporanRekening::create([
+                'history_laporan_id' => $history->id,
+                'rekening_id'        => $rekening['id'],
+                'saldo_awal'         => $rekening['saldo_awal'],
+                'masuk'              => $rekening['masuk'],
+                'keluar'             => $rekening['keluar'],
+                'saldo_akhir'        => $rekening['saldo_akhir'],
+            ]);
+        }
+
+        $this->loadHistory();
+        $this->dispatch('swal', type: 'success', message: 'History laporan berhasil disimpan.');
+    }
+
+    public function hapusHistory(int $id): void
+    {
+        HistoryLaporan::where('id', $id)->delete();
+        $this->loadHistory();
+        $this->dispatch('swal', type: 'success', message: 'History laporan berhasil dihapus.');
     }
 
     public function generate(): void
@@ -60,7 +187,33 @@ new class extends Component
         $kategoriList = Kategori::all();
         $rekeningList = Rekening::all();
 
-        $this->dataKategori = $kategoriList->map(function ($kat) {
+        $historySeed = null;
+        if ($this->from) {
+            $fromDate = Carbon::parse($this->from);
+            $historySeed = HistoryLaporan::where(function ($query) use ($fromDate) {
+                    $query->whereDate('tanggal_sampai', $fromDate->format('Y-m-d'))
+                          ->orWhereDate('tanggal_sampai', $fromDate->copy()->subDay()->format('Y-m-d'));
+                })
+                ->with(['kategoriDetails', 'rekeningDetails'])
+                ->orderByDesc('tanggal_sampai')
+                ->first();
+        }
+
+        $historyKategoriBalances = [];
+        $historyRekeningBalances = [];
+        if ($historySeed) {
+            $historyKategoriBalances = $historySeed->kategoriDetails
+                ->keyBy('kategori_id')
+                ->map(fn ($detail) => (float) $detail->saldo_akhir)
+                ->toArray();
+
+            $historyRekeningBalances = $historySeed->rekeningDetails
+                ->keyBy('rekening_id')
+                ->map(fn ($detail) => (float) $detail->saldo_akhir)
+                ->toArray();
+        }
+
+        $this->dataKategori = $kategoriList->map(function ($kat) use ($historyKategoriBalances) {
             $masuk  = Keuangan::where('id_kategori', $kat->id)
                 ->withoutSaldoAwal()
                 ->whereDate('tanggal', '>=', $this->from)
@@ -70,11 +223,17 @@ new class extends Component
                 ->whereDate('tanggal', '>=', $this->from)
                 ->whereDate('tanggal', '<=', $this->to)->sum('keluar');
 
-            $mIn  = Keuangan::where('id_kategori', $kat->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $this->from)->sum('masuk');
-            $mOut = Keuangan::where('id_kategori', $kat->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $this->from)->sum('keluar');
-            $saldoAwal = $kat->saldo_awal + $mIn - $mOut;
+            $saldoAwal = $kat->saldo_awal;
+            if (array_key_exists($kat->id, $historyKategoriBalances)) {
+                $saldoAwal = $historyKategoriBalances[$kat->id];
+            } else {
+                $mIn  = Keuangan::where('id_kategori', $kat->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $this->from)->sum('masuk');
+                $mOut = Keuangan::where('id_kategori', $kat->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $this->from)->sum('keluar');
+                $saldoAwal = $kat->saldo_awal + $mIn - $mOut;
+            }
 
             return [
+                'id'          => $kat->id,
                 'nama'        => $kat->nama,
                 'saldo_awal'  => $saldoAwal,
                 'masuk'       => $masuk,
@@ -83,23 +242,29 @@ new class extends Component
             ];
         })->toArray();
 
-        $this->dataRekening = $rekeningList->map(function ($rek) {
+        $this->dataRekening = $rekeningList->map(function ($rek) use ($historyRekeningBalances) {
             $summary = $rek->reportBalanceSummary($this->from, $this->to);
+            $saldoAwal = $summary['saldo_awal'];
+            if (array_key_exists($rek->id, $historyRekeningBalances)) {
+                $saldoAwal = $historyRekeningBalances[$rek->id];
+            }
 
             return [
+                'id'          => $rek->id,
                 'nama'        => $rek->nama_rek,
                 'atas_nama'   => $rek->atas_nama,
                 'no_rek'      => $rek->no_rek,
-                'saldo_awal'  => $summary['saldo_awal'],
+                'saldo_awal'  => $saldoAwal,
                 'masuk'       => $summary['masuk'],
                 'keluar'      => $summary['keluar'],
-                'saldo_akhir' => $summary['saldo_akhir'],
+                'saldo_akhir' => $saldoAwal + $summary['masuk'] - $summary['keluar'],
             ];
         })->toArray();
 
         $this->totalMasuk  = collect($this->detailMasuk)->sum('masuk');
         $this->totalKeluar = collect($this->detailKeluar)->sum('keluar');
         $this->totalSaldo  = $this->totalMasuk - $this->totalKeluar;
+        $this->globalSaldoAwal = collect($this->dataKategori)->sum('saldo_awal');
         $this->hasData     = true;
     }
 
@@ -122,7 +287,95 @@ new class extends Component
 
 <div>
 <div class="card mb-5">
-    <h2 class="text-sm font-bold text-gray-700 mb-4">Filter Periode</h2>
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold text-gray-700">Filter Periode</h2>
+        <button wire:click="toggleHistory" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            History Laporan
+            @if($historyTotal > 0)
+            <span class="bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 text-[10px] font-bold">{{ $historyTotal }}</span>
+            @endif
+        </button>
+    </div>
+
+    {{-- History Panel --}}
+    @if($showHistory)
+    <div class="bg-gray-50 border border-gray-200 rounded-xl mb-4 overflow-hidden">
+        <div class="px-4 py-2.5 bg-gray-100 border-b border-gray-200">
+            <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider">History Laporan Periodik</h3>
+        </div>
+        @forelse($historyList as $h)
+        <div class="px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-white transition">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800">
+                        {{ \Carbon\Carbon::parse($h['tanggal_dari'])->isoFormat('D MMM Y') }} –
+                        {{ \Carbon\Carbon::parse($h['tanggal_sampai'])->isoFormat('D MMM Y') }}
+                    </p>
+                    <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs">
+                        <span class="text-gray-500">Saldo Awal: <strong class="text-gray-700">Rp {{ number_format($h['saldo_awal'], 0, ',', '.') }}</strong></span>
+                        <span class="text-gray-500">Masuk: <strong class="text-emerald-600">Rp {{ number_format($h['masuk'], 0, ',', '.') }}</strong></span>
+                        <span class="text-gray-500">Keluar: <strong class="text-red-500">Rp {{ number_format($h['keluar'], 0, ',', '.') }}</strong></span>
+                        <span class="text-gray-500">Saldo Akhir: <strong class="text-blue-600">Rp {{ number_format($h['saldo_akhir'], 0, ',', '.') }}</strong></span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-1">{{ $h['created_by_name'] }} · {{ $h['created_at'] }}</p>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button wire:click="applyHistory({{ $h['id'] }})" class="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition" title="Pakai sebagai titik awal">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                        </svg>
+                    </button>
+                    <button
+                        x-data
+                        @click.prevent="Swal.fire({
+                            title: 'Hapus history laporan ini?',
+                            text: 'Tindakan ini tidak dapat dibatalkan.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Ya, hapus!',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                $wire.hapusHistory({{ $h['id'] }});
+                            }
+                        })"
+                        class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Hapus"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        @empty
+        <div class="px-4 py-6 text-center text-gray-400 text-sm">Belum ada history laporan yang disimpan.</div>
+        @endforelse
+
+        @if($historyTotal > $historyLimit)
+        <div class="px-4 py-3 bg-white border-t border-gray-200 flex items-center justify-between gap-3">
+            <div class="text-xs text-gray-500">
+                Halaman {{ $historyPage }} dari {{ $this->historyPages() }}
+            </div>
+            <div class="flex items-center gap-2">
+                <button wire:click="previousHistoryPage" @if($historyPage === 1) disabled @endif class="btn btn-secondary btn-sm {{ $historyPage === 1 ? 'opacity-50 cursor-not-allowed' : '' }}">
+                    Sebelumnya
+                </button>
+                <button wire:click="nextHistoryPage" @if($historyPage === $this->historyPages()) disabled @endif class="btn btn-secondary btn-sm {{ $historyPage === $this->historyPages() ? 'opacity-50 cursor-not-allowed' : '' }}">
+                    Berikutnya
+                </button>
+            </div>
+        </div>
+        @endif
+    </div>
+    @endif
+
     <div class="grid grid-cols-2 sm:flex sm:flex-row gap-3 items-end">
         <div class="col-span-1 sm:flex-1">
             <label class="label">Dari</label>
@@ -143,6 +396,12 @@ new class extends Component
 
 @if($hasData)
 <div class="flex justify-end gap-2 mb-4">
+    <button wire:click="simpanHistory" class="btn-secondary text-xs">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Simpan History
+    </button>
     <button wire:click="downloadExcel" class="btn-secondary text-xs">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>

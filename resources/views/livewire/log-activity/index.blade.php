@@ -143,17 +143,6 @@ new class extends Component
 
 <div
     x-data="{
-        showAlert(type, message) {
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: type,
-                title: message,
-                showConfirmButton: false,
-                timer: 3200,
-                timerProgressBar: true,
-            })
-        },
         confirmDeleteDateRange() {
             Swal.fire({
                 title: 'Hapus log pada rentang ini?',
@@ -188,17 +177,6 @@ new class extends Component
         }
     }"
 >
-    @once
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    @endonce
-
-    @if(session('success'))
-    <div x-init="showAlert('success', @js(session('success')))" class="hidden"></div>
-    @endif
-
-    @if(session('error'))
-    <div x-init="showAlert('error', @js(session('error')))" class="hidden"></div>
-    @endif
 
     <div class="card mb-5">
         <div class="mb-4 flex items-center justify-between gap-3">

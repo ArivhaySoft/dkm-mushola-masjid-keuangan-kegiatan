@@ -59,13 +59,6 @@ new class extends Component
 </div>
 @else
 
-@if(session('success'))
-<div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3"
-     x-data x-init="setTimeout(() => $el.remove(), 4000)">
-    ✓ {{ session('success') }}
-</div>
-@endif
-
 <div class="mb-4">
     <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari pengguna..."
            class="input max-w-sm" />
