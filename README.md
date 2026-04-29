@@ -194,6 +194,19 @@ cat database/schema-backup-migrations.txt
 
 ```bash
 php artisan storage:link
+
+sudo chown -R $USER:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+
+php artisan view:clear
+php artisan cache:clear
+
+npm install
+npm run build
+
+sudo chown -R $USER:www-data public/build
+sudo chmod -R 755 public/build
+
 ```
 
 ### 6. Jalankan Aplikasi
