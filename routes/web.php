@@ -11,6 +11,7 @@ Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
 
+Route::post('/login',               [GoogleAuthController::class, 'loginEmail'])->name('login.email');
 Route::get('/auth/google',          [GoogleAuthController::class, 'redirect'])->name('auth.google');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 Route::get('/admin-setup',          [GoogleAuthController::class, 'adminSetup'])->name('admin-setup');

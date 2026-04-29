@@ -19,17 +19,29 @@ new class extends Component
     public $foto_mushola;
     public string $current_foto = '';
 
+    public bool   $widget_jadwal_pengajian = true;
+    public bool   $widget_posisi_keuangan  = true;
+    public bool   $widget_kegiatan         = true;
+    public bool   $widget_pengunjung       = true;
+    public string $theme_color             = 'hijau';
+
     public function mount(): void
     {
-        $this->app_name = Setting::get('app_name', 'Keuangan Mushola');
+        $this->app_name     = Setting::get('app_name', 'Keuangan Mushola');
         $this->nama_mushola = Setting::get('nama_mushola', '');
         $this->current_foto = Setting::get('foto_mushola', '') ?? '';
+
+        $this->widget_jadwal_pengajian = Setting::get('widget_jadwal_pengajian', '1') !== '0';
+        $this->widget_posisi_keuangan  = Setting::get('widget_posisi_keuangan',  '1') !== '0';
+        $this->widget_kegiatan         = Setting::get('widget_kegiatan',         '1') !== '0';
+        $this->widget_pengunjung       = Setting::get('widget_pengunjung',        '1') !== '0';
+        $this->theme_color             = Setting::get('theme_color', 'hijau');
     }
 
     public function save(): void
     {
         $this->validate([
-            'app_name' => 'required|string|max:100',
+            'app_name'     => 'required|string|max:100',
             'nama_mushola' => 'nullable|string|max:100',
             'foto_mushola' => 'nullable|image|max:2048',
         ]);
@@ -38,7 +50,6 @@ new class extends Component
         Setting::set('nama_mushola', $this->nama_mushola);
 
         if ($this->foto_mushola) {
-            // Hapus foto lama jika ada
             if ($this->current_foto && Storage::disk('public')->exists($this->current_foto)) {
                 Storage::disk('public')->delete($this->current_foto);
             }
@@ -48,7 +59,13 @@ new class extends Component
             $this->reset('foto_mushola');
         }
 
-        session()->flash('success', 'Pengaturan berhasil disimpan.');
+        Setting::set('widget_jadwal_pengajian', $this->widget_jadwal_pengajian ? '1' : '0');
+        Setting::set('widget_posisi_keuangan',  $this->widget_posisi_keuangan  ? '1' : '0');
+        Setting::set('widget_kegiatan',         $this->widget_kegiatan         ? '1' : '0');
+        Setting::set('widget_pengunjung',       $this->widget_pengunjung        ? '1' : '0');
+        Setting::set('theme_color',             $this->theme_color);
+
+        $this->dispatch('swal', ['type' => 'success', 'message' => 'Pengaturan berhasil disimpan.']);
     }
 
     public function removeFoto(): void
@@ -58,7 +75,7 @@ new class extends Component
         }
         Setting::set('foto_mushola', '');
         $this->current_foto = '';
-        session()->flash('success', 'Foto berhasil dihapus.');
+        $this->dispatch('swal', ['type' => 'success', 'message' => 'Foto berhasil dihapus.']);
     }
 }; ?>
 
@@ -129,6 +146,81 @@ new class extends Component
                         @error('foto_mushola') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
+            </div>
+        </div>
+
+        {{-- Tema Warna --}}
+        <div class="card mt-5 space-y-4">
+            <div>
+                <h3 class="text-base font-bold text-gray-800">Tema Warna</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Warna utama yang digunakan di seluruh aplikasi.</p>
+            </div>
+
+            @php
+            $themes = [
+                ['key' => 'hijau',   'label' => 'Hijau',   'hex' => '#277a5a'],
+                ['key' => 'biru',    'label' => 'Biru',    'hex' => '#2563eb'],
+                ['key' => 'ungu',    'label' => 'Ungu',    'hex' => '#9333ea'],
+                ['key' => 'merah',   'label' => 'Merah',   'hex' => '#e11d48'],
+                ['key' => 'oranye',  'label' => 'Oranye',  'hex' => '#ea580c'],
+                ['key' => 'teal',    'label' => 'Teal',    'hex' => '#0d9488'],
+                ['key' => 'slate',   'label' => 'Abu-abu', 'hex' => '#475569'],
+            ];
+            @endphp
+
+            <div class="flex flex-wrap gap-3">
+                @foreach($themes as $t)
+                <button type="button"
+                        wire:click="$set('theme_color', '{{ $t['key'] }}')"
+                        title="{{ $t['label'] }}"
+                        class="flex flex-col items-center gap-1.5 group">
+                    <span class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ring-offset-2
+                        {{ $theme_color === $t['key'] ? 'ring-2 ring-offset-2 scale-110' : 'hover:scale-105' }}"
+                        style="background: {{ $t['hex'] }}; {{ $theme_color === $t['key'] ? 'ring-color:' . $t['hex'] . ';' : '' }}">
+                        @if($theme_color === $t['key'])
+                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        @endif
+                    </span>
+                    <span class="text-xs font-medium {{ $theme_color === $t['key'] ? 'text-gray-800' : 'text-gray-400' }}">
+                        {{ $t['label'] }}
+                    </span>
+                </button>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Widget Beranda --}}
+        <div class="card mt-5 space-y-4">
+            <div>
+                <h3 class="text-base font-bold text-gray-800">Widget Halaman Publik</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Pilih widget yang ditampilkan di halaman beranda publik.</p>
+            </div>
+
+            @php
+            $widgets = [
+                ['key' => 'widget_jadwal_pengajian', 'label' => 'Jadwal Pengajian',  'desc' => 'Jadwal pengajian 2 mingguan dan bulanan'],
+                ['key' => 'widget_posisi_keuangan',  'label' => 'Posisi Keuangan',   'desc' => 'Ringkasan kas bulan ini per kategori'],
+                ['key' => 'widget_kegiatan',          'label' => 'Kegiatan',          'desc' => 'Grid foto dan informasi kegiatan'],
+                ['key' => 'widget_pengunjung',        'label' => 'Statistik Pengunjung', 'desc' => 'Jumlah pengunjung hari ini, bulan ini, dan total'],
+            ];
+            @endphp
+
+            <div class="divide-y divide-gray-100">
+                @foreach($widgets as $w)
+                <label class="flex items-center justify-between py-3 cursor-pointer group">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800 group-hover:text-primary-700 transition-colors">{{ $w['label'] }}</p>
+                        <p class="text-xs text-gray-400">{{ $w['desc'] }}</p>
+                    </div>
+                    <button type="button"
+                            wire:click="$toggle('{{ $w['key'] }}')"
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none {{ $this->{$w['key']} ? 'bg-primary-600' : 'bg-gray-200' }}">
+                        <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 {{ $this->{$w['key']} ? 'translate-x-5' : 'translate-x-0' }}"></span>
+                    </button>
+                </label>
+                @endforeach
             </div>
         </div>
 

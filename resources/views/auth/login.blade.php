@@ -7,6 +7,7 @@
     @php $__favicon = \App\Models\Setting::get('foto_mushola'); @endphp
     <link rel="icon" href="{{ $__favicon ? Storage::url($__favicon) : '/favicon.svg' }}">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <x-theme-style />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -15,7 +16,12 @@
                     fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
                     colors: {
                         primary: {
-                            600: '#277a5a', 700: '#1f6148', 800: '#1b4d3a',
+                            50:  'var(--color-primary-50)',
+                            100: 'var(--color-primary-100)',
+                            200: 'var(--color-primary-200)',
+                            600: 'var(--color-primary-600)',
+                            700: 'var(--color-primary-700)',
+                            800: 'var(--color-primary-800)',
                         }
                     }
                 }
@@ -55,6 +61,33 @@
                 {{ session('error') }}
             </div>
             @endif
+
+            {{-- Email/Password Form --}}
+            <form method="POST" action="{{ route('login.email') }}" class="space-y-3 mb-4">
+                @csrf
+                <div>
+                    <input type="email" name="email" value="{{ old('email') }}" placeholder="Email"
+                           class="w-full border {{ $errors->has('email') ? 'border-red-400 bg-red-50' : 'border-gray-200' }} rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent transition" />
+                    @error('email')
+                    <p class="mt-1 text-xs text-red-600 px-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div>
+                    <input type="password" name="password" placeholder="Password"
+                           class="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent transition" />
+                </div>
+                <button type="submit"
+                        class="w-full bg-primary-700 hover:bg-primary-800 text-white font-semibold py-3.5 rounded-2xl transition-all duration-200">
+                    Masuk
+                </button>
+            </form>
+
+            {{-- Divider --}}
+            <div class="flex items-center gap-3 mb-4">
+                <div class="flex-1 h-px bg-gray-200"></div>
+                <span class="text-xs text-gray-400 font-medium">atau</span>
+                <div class="flex-1 h-px bg-gray-200"></div>
+            </div>
 
             {{-- Google Login --}}
             <a href="{{ route('auth.google') }}"

@@ -14,15 +14,25 @@ new class extends Component
 
     public int  $tahun   = 0;
     public bool $hasData = false;
-    public array $dataPerBulan = [];
-    public array $dataKategori = [];
-    public array $dataRekening = [];
-    public float $totalMasuk   = 0;
-    public float $totalKeluar  = 0;
+    public array $dataPerBulan    = [];
+    public array $dataKategori    = [];
+    public array $dataRekening    = [];
+    public array $kategoriOptions = [];
+    public float $totalMasuk      = 0;
+    public float $totalKeluar     = 0;
+    public int   $filterKategori  = 0;
 
     public function mount(): void
     {
         $this->tahun = now()->year;
+        $this->kategoriOptions = Kategori::orderBy('nama')->get(['id', 'nama'])->toArray();
+    }
+
+    public function updatedFilterKategori(): void
+    {
+        if ($this->hasData) {
+            $this->buildPerBulan();
+        }
     }
 
     public function generate(): void
@@ -65,26 +75,42 @@ new class extends Component
             ];
         })->toArray();
 
+        $this->filterKategori = 0;
+        $this->hasData        = true;
+        $this->buildPerBulan();
+    }
+
+    public function buildPerBulan(): void
+    {
         $this->dataPerBulan = collect(range(1, 12))->map(function ($m) {
             $startMonth = \Carbon\Carbon::create($this->tahun, $m, 1)->startOfMonth()->format('Y-m-d');
-            $masuk  = Keuangan::whereYear('tanggal', $this->tahun)->whereMonth('tanggal', $m)->sum('masuk');
-            $keluar = Keuangan::whereYear('tanggal', $this->tahun)->whereMonth('tanggal', $m)->sum('keluar');
+
+            $masuk = Keuangan::whereYear('tanggal', $this->tahun)
+                ->whereMonth('tanggal', $m)
+                ->when($this->filterKategori, fn($q) => $q->where('id_kategori', $this->filterKategori))
+                ->sum('masuk');
+
+            $keluar = Keuangan::whereYear('tanggal', $this->tahun)
+                ->whereMonth('tanggal', $m)
+                ->when($this->filterKategori, fn($q) => $q->where('id_kategori', $this->filterKategori))
+                ->sum('keluar');
+
             $saldoAwal = Keuangan::whereDate('tanggal', '<', $startMonth)
+                ->when($this->filterKategori, fn($q) => $q->where('id_kategori', $this->filterKategori))
                 ->selectRaw('COALESCE(SUM(masuk),0) - COALESCE(SUM(keluar),0) as saldo')
                 ->value('saldo') ?? 0;
 
             return [
-                'bulan'  => \Carbon\Carbon::create($this->tahun, $m)->isoFormat('MMM'),
+                'bulan'      => \Carbon\Carbon::create($this->tahun, $m)->isoFormat('MMM'),
                 'saldo_awal' => $saldoAwal,
-                'masuk'  => $masuk,
-                'keluar' => $keluar,
-                'saldo_akhir'  => $saldoAwal + $masuk - $keluar,
+                'masuk'      => $masuk,
+                'keluar'     => $keluar,
+                'saldo_akhir' => $saldoAwal + $masuk - $keluar,
             ];
         })->toArray();
 
         $this->totalMasuk  = collect($this->dataPerBulan)->sum('masuk');
         $this->totalKeluar = collect($this->dataPerBulan)->sum('keluar');
-        $this->hasData     = true;
     }
 
     public function downloadExcel(): void
@@ -139,7 +165,15 @@ new class extends Component
 
 {{-- Per bulan --}}
 <div class="card mb-4">
-    <h3 class="text-sm font-bold text-gray-700 mb-3">Rekap Per Bulan – {{ $tahun }}</h3>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <h3 class="text-sm font-bold text-gray-700">Rekap Per Bulan – {{ $tahun }}</h3>
+        <select wire:model.live="filterKategori" class="input text-sm w-full sm:w-48">
+            <option value="0">Semua Kategori</option>
+            @foreach($kategoriOptions as $kat)
+            <option value="{{ $kat['id'] }}">{{ $kat['nama'] }}</option>
+            @endforeach
+        </select>
+    </div>
     {{-- Mobile --}}
     <div class="sm:hidden divide-y divide-gray-100">
         @foreach($dataPerBulan as $row)

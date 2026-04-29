@@ -5,6 +5,7 @@ use App\Models\Kegiatan;
 use App\Models\JenisKegiatan;
 use App\Models\JadwalPengajian;
 use App\Models\Keuangan;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Visitor;
 use Livewire\Volt\Component;
@@ -31,18 +32,25 @@ new class extends Component
     {
         $hasAdmin = User::whereHas('roles', fn($q) => $q->where('name', 'admin'))->exists();
 
-        $data = Kegiatan::with('creator', 'fotos')
-            ->when($this->search, fn($q) => $q->where('judul', 'like', "%{$this->search}%"))
-            ->when($this->jenis, fn($q) => $q->where('jenis', $this->jenis))
-            ->orderBy('tanggal_kegiatan', 'desc')
-            ->paginate(12);
+        $showJadwal    = Setting::get('widget_jadwal_pengajian', '1') !== '0';
+        $showKeuangan  = Setting::get('widget_posisi_keuangan',  '1') !== '0';
+        $showKegiatan  = Setting::get('widget_kegiatan',         '1') !== '0';
+        $showPengunjung = Setting::get('widget_pengunjung',      '1') !== '0';
 
-        $jadwal2Minggu = JadwalPengajian::where('aktif', true)->where('frekuensi', '2_minggu')->first();
-        $jadwalBulanan = JadwalPengajian::where('aktif', true)->where('frekuensi', 'bulanan')->first();
+        $data = $showKegiatan
+            ? Kegiatan::with('creator', 'fotos')
+                ->when($this->search, fn($q) => $q->where('judul', 'like', "%{$this->search}%"))
+                ->when($this->jenis, fn($q) => $q->where('jenis', $this->jenis))
+                ->orderBy('tanggal_kegiatan', 'desc')
+                ->paginate(12)
+            : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 12);
 
-        $visitorHariIni = Visitor::where('tanggal', today())->count();
-        $visitorBulanIni = Visitor::whereMonth('tanggal', now()->month)->whereYear('tanggal', now()->year)->count();
-        $visitorTotal = Visitor::count();
+        $jadwal2Minggu = $showJadwal ? JadwalPengajian::where('aktif', true)->where('frekuensi', '2_minggu')->first() : null;
+        $jadwalBulanan = $showJadwal ? JadwalPengajian::where('aktif', true)->where('frekuensi', 'bulanan')->first() : null;
+
+        $visitorHariIni  = $showPengunjung ? Visitor::where('tanggal', today())->count() : 0;
+        $visitorBulanIni = $showPengunjung ? Visitor::whereMonth('tanggal', now()->month)->whereYear('tanggal', now()->year)->count() : 0;
+        $visitorTotal    = $showPengunjung ? Visitor::count() : 0;
 
         $awalBulan = now()->startOfMonth();
         $akhirBulan = now()->endOfMonth();
@@ -50,26 +58,28 @@ new class extends Component
         $from = $awalBulan->toDateString();
         $to   = $akhirBulan->toDateString();
 
-        $kategoriKas = Kategori::all()->map(function (Kategori $kategori) use ($from, $to) {
-            $masuk     = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereBetween('tanggal', [$from, $to])->sum('masuk');
-            $keluar    = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereBetween('tanggal', [$from, $to])->sum('keluar');
-            $mIn       = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $from)->sum('masuk');
-            $mOut      = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $from)->sum('keluar');
-            $saldoAwal = (float) $kategori->saldo_awal + $mIn - $mOut;
+        $kategoriKas = $showKeuangan
+            ? Kategori::all()->map(function (Kategori $kategori) use ($from, $to) {
+                $masuk     = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereBetween('tanggal', [$from, $to])->sum('masuk');
+                $keluar    = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereBetween('tanggal', [$from, $to])->sum('keluar');
+                $mIn       = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $from)->sum('masuk');
+                $mOut      = (float) Keuangan::where('id_kategori', $kategori->id)->withoutSaldoAwal()->whereDate('tanggal', '<', $from)->sum('keluar');
+                $saldoAwal = (float) $kategori->saldo_awal + $mIn - $mOut;
 
-            $kategori->setAttribute('saldo_awal', $saldoAwal);
-            $kategori->setAttribute('masuk', $masuk);
-            $kategori->setAttribute('keluar', $keluar);
-            $kategori->setAttribute('saldo_akhir', $saldoAwal + $masuk - $keluar);
+                $kategori->setAttribute('saldo_awal', $saldoAwal);
+                $kategori->setAttribute('masuk', $masuk);
+                $kategori->setAttribute('keluar', $keluar);
+                $kategori->setAttribute('saldo_akhir', $saldoAwal + $masuk - $keluar);
 
-            return $kategori;
-        });
+                return $kategori;
+            })
+            : collect();
 
         $kasTerkiniLabel = 'Kas Terkini ' . $awalBulan->translatedFormat('F Y');
 
-        $jenisOptions = JenisKegiatan::orderBy('nama')->get();
+        $jenisOptions = $showKegiatan ? JenisKegiatan::orderBy('nama')->get() : collect();
 
-        return compact('data', 'hasAdmin', 'jadwal2Minggu', 'jadwalBulanan', 'visitorHariIni', 'visitorBulanIni', 'visitorTotal', 'kategoriKas', 'kasTerkiniLabel', 'jenisOptions');
+        return compact('data', 'hasAdmin', 'jadwal2Minggu', 'jadwalBulanan', 'visitorHariIni', 'visitorBulanIni', 'visitorTotal', 'kategoriKas', 'kasTerkiniLabel', 'jenisOptions', 'showJadwal', 'showKeuangan', 'showKegiatan', 'showPengunjung');
     }
 }; ?>
 
@@ -89,6 +99,7 @@ new class extends Component
 @endif
 
 {{-- Jadwal Pengajian --}}
+@if($showJadwal)
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
 
     {{-- Pengajian 2 Mingguan --}}
@@ -177,9 +188,10 @@ new class extends Component
     </div>
 
 </div>
+@endif
 
 {{-- Posisi Keuangan --}}
-@if($kategoriKas->count() > 0)
+@if($showKeuangan && $kategoriKas->count() > 0)
 <div class="card p-0 overflow-hidden mb-6">
     <div class="px-5 py-3.5 bg-primary-800 flex items-center gap-2.5">
         <svg class="w-5 h-5 text-primary-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -247,6 +259,9 @@ new class extends Component
     </div>
 </div>
 @endif
+
+{{-- Kegiatan --}}
+@if($showKegiatan)
 
 {{-- Filter --}}
 <div class="grid grid-cols-2 gap-3 mb-5">
@@ -341,7 +356,10 @@ new class extends Component
 
 <div class="mt-4">{{ $data->links() }}</div>
 
+@endif
+
 {{-- Jama'ah Pengunjung --}}
+@if($showPengunjung)
 <div class="card p-0 overflow-hidden mt-6">
     <div class="px-5 py-3.5 bg-primary-800 flex items-center gap-2.5">
         <svg class="w-5 h-5 text-primary-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -366,5 +384,7 @@ new class extends Component
         </div>
     </div>
 </div>
+@endif
+
 </div>
 

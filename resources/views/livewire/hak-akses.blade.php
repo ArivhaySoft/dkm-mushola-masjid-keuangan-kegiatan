@@ -4,6 +4,7 @@ use App\Models\Role;
 use App\Models\User;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Hash;
 
 new class extends Component
 {
@@ -18,6 +19,13 @@ new class extends Component
     public bool   $showModal = false;
     public ?int   $userId    = null;
     public array  $selectedRoles = [];
+
+    public bool   $showCreateModal = false;
+    public string $newName         = '';
+    public string $newEmail        = '';
+    public string $newPassword     = '';
+    public string $newPasswordConfirmation = '';
+    public array  $newRoles        = [];
 
     public function with(): array
     {
@@ -46,6 +54,52 @@ new class extends Component
         session()->flash('success', 'Hak akses berhasil diperbarui.');
         $this->showModal = false;
     }
+
+    public function openCreate(): void
+    {
+        $this->newName = '';
+        $this->newEmail = '';
+        $this->newPassword = '';
+        $this->newPasswordConfirmation = '';
+        $this->newRoles = [];
+        $this->resetErrorBag();
+        $this->showCreateModal = true;
+    }
+
+    public function createUser(): void
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+
+        $this->validate([
+            'newName'                 => 'required|string|max:255',
+            'newEmail'                => 'required|email|unique:users,email',
+            'newPassword'             => 'required|string|min:8|same:newPasswordConfirmation',
+            'newPasswordConfirmation' => 'required|string',
+        ], [
+            'newName.required'     => 'Nama wajib diisi.',
+            'newEmail.required'    => 'Email wajib diisi.',
+            'newEmail.email'       => 'Format email tidak valid.',
+            'newEmail.unique'      => 'Email sudah digunakan.',
+            'newPassword.required' => 'Password wajib diisi.',
+            'newPassword.min'      => 'Password minimal 8 karakter.',
+            'newPassword.same'     => 'Konfirmasi password tidak cocok.',
+            'newPasswordConfirmation.required' => 'Konfirmasi password wajib diisi.',
+        ]);
+
+        $user = User::create([
+            'name'     => $this->newName,
+            'email'    => $this->newEmail,
+            'password' => Hash::make($this->newPassword),
+        ]);
+
+        if (!empty($this->newRoles)) {
+            $user->roles()->sync($this->newRoles);
+        }
+
+        session()->flash('success', 'Pengguna berhasil ditambahkan.');
+        $this->showCreateModal = false;
+        $this->resetPage();
+    }
 }; ?>
 
 <div>
@@ -59,9 +113,22 @@ new class extends Component
 </div>
 @else
 
-<div class="mb-4">
+@if(session('success'))
+<div class="mb-4 bg-green-50 text-green-700 text-sm rounded-xl px-4 py-3 border border-green-200">
+    {{ session('success') }}
+</div>
+@endif
+
+<div class="mb-4 flex items-center gap-3">
     <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari pengguna..."
            class="input max-w-sm" />
+    <button wire:click="openCreate"
+            class="btn-primary flex items-center gap-2 whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Tambah Pengguna
+    </button>
 </div>
 
 <div class="card overflow-hidden p-0">
@@ -160,7 +227,7 @@ new class extends Component
     <div class="p-4 border-t">{{ $users->links() }}</div>
 </div>
 
-{{-- Modal --}}
+{{-- Modal Atur Peran --}}
 @if($showModal)
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
     <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
@@ -187,6 +254,67 @@ new class extends Component
         <div class="px-5 pb-5 flex gap-2">
             <button wire:click="$set('showModal', false)" class="btn-secondary flex-1">Batal</button>
             <button wire:click="saveRoles" class="btn-primary flex-1">Simpan</button>
+        </div>
+    </div>
+</div>
+@endif
+
+{{-- Modal Tambah Pengguna --}}
+@if($showCreateModal)
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
+        <div class="flex items-center justify-between px-5 py-4 border-b">
+            <h3 class="text-base font-bold">Tambah Pengguna</h3>
+            <button wire:click="$set('showCreateModal', false)" class="p-1.5 hover:bg-gray-100 rounded-lg">
+                <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-5 space-y-3">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Nama</label>
+                <input type="text" wire:model="newName" placeholder="Nama lengkap"
+                       class="w-full border {{ $errors->has('newName') ? 'border-red-400' : 'border-gray-200' }} rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent" />
+                @error('newName') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Email</label>
+                <input type="email" wire:model="newEmail" placeholder="email@example.com"
+                       class="w-full border {{ $errors->has('newEmail') ? 'border-red-400' : 'border-gray-200' }} rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent" />
+                @error('newEmail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+                <input type="password" wire:model="newPassword" placeholder="Min. 8 karakter"
+                       class="w-full border {{ $errors->has('newPassword') ? 'border-red-400' : 'border-gray-200' }} rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent" />
+                @error('newPassword') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Konfirmasi Password</label>
+                <input type="password" wire:model="newPasswordConfirmation" placeholder="Ulangi password"
+                       class="w-full border {{ $errors->has('newPasswordConfirmation') ? 'border-red-400' : 'border-gray-200' }} rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent" />
+                @error('newPasswordConfirmation') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-2">Peran</label>
+                <div class="space-y-2">
+                    @foreach($roles as $role)
+                    <label class="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" wire:model="newRoles" value="{{ $role->id }}"
+                               class="w-4 h-4 text-primary-600 rounded" />
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">{{ $role->label }}</p>
+                            <p class="text-xs text-gray-400">{{ $role->name }}</p>
+                        </div>
+                    </label>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        <div class="px-5 pb-5 flex gap-2">
+            <button wire:click="$set('showCreateModal', false)" class="btn-secondary flex-1">Batal</button>
+            <button wire:click="createUser" class="btn-primary flex-1">Simpan</button>
         </div>
     </div>
 </div>

@@ -94,6 +94,21 @@ class GoogleAuthController extends Controller
         return redirect()->route('dashboard');
     }
 
+    public function loginEmail(\Illuminate\Http\Request $request)
+    {
+        $credentials = $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $request->session()->regenerate();
+            return redirect()->intended(route('dashboard'));
+        }
+
+        return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
+    }
+
     public function logout()
     {
         Auth::logout();
