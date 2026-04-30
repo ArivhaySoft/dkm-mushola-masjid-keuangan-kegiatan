@@ -110,7 +110,7 @@ new class extends Component
 
             {{-- Nama Mushola --}}
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Mushola / Organisasi</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Organisasi</label>
                 <input type="text" wire:model="nama_mushola" class="input" placeholder="Contoh: Fajrul Iman">
                 <p class="text-xs text-gray-400 mt-1">Ditampilkan di bawah nama aplikasi pada sidebar.</p>
                 @error('nama_mushola') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
@@ -118,7 +118,7 @@ new class extends Component
 
             {{-- Foto / Logo --}}
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Logo / Foto Mushola</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Logo / Foto Organisasi</label>
                 <div class="flex items-start gap-4">
                     {{-- Preview --}}
                     <div class="flex-shrink-0">
@@ -165,6 +165,7 @@ new class extends Component
                 ['key' => 'oranye',  'label' => 'Oranye',  'hex' => '#ea580c'],
                 ['key' => 'teal',    'label' => 'Teal',    'hex' => '#0d9488'],
                 ['key' => 'slate',   'label' => 'Abu-abu', 'hex' => '#475569'],
+                ['key' => 'emas',    'label' => 'Emas',    'hex' => '#d97706'],
             ];
             @endphp
 

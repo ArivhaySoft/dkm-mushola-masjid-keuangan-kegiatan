@@ -38,7 +38,7 @@ new class extends Component
         $kategori   = Kategori::all();
 
         $transaksiTerbaru = Keuangan::with(['rekening', 'kategori', 'creator'])
-            ->orderBy('created_at', 'desc')->limit(8)->get();
+            ->orderBy('tanggal', 'desc')->orderBy('created_at', 'desc')->limit(8)->get();
 
         return compact(
             'saldoAwalBulan', 'totalMasukBulan', 'totalKeluarBulan', 'sisaSaldo',
