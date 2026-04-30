@@ -54,7 +54,7 @@
             </div>
 
             <h1 class="text-2xl font-extrabold text-gray-900 text-center mb-1">{{ \App\Models\Setting::get('app_name', 'Keuangan Mushola') }}</h1>
-            <p class="text-sm text-gray-500 text-center mb-8">Sistem Pencatatan Keuangan Masjid & Mushola</p>
+            <p class="text-sm text-gray-500 text-center mb-8">Sistem Pencatatan Kas</p>
 
             @if(session('error'))
             <div class="mb-4 bg-red-50 text-red-700 text-sm rounded-xl px-4 py-3 border border-red-200">
